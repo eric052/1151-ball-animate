@@ -1,0 +1,78 @@
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#ffffff;--card:#fff;--tx:#14171f;--ac:#ff6b35;--bd:#e5e7eb;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+.app{max-width:480px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0 12px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1;padding:10px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:15px}
+.tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.hero{background:#ffffff;border:1px solid var(--bd);border-radius:24px;padding:16px;text-align:center;color:var(--tx)}
+.stage img{width:100%;max-height:260px}
+.strip{display:flex;gap:5px;overflow-x:auto;padding:6px 0}
+.strip img{width:56px;height:45px;flex:none;border-radius:8px;background:#f3f4f6;opacity:.45;border:2px solid transparent}
+.strip img.on{opacity:1;border-color:var(--ac)}
+.ctrl{display:flex;align-items:center;gap:10px;justify-content:center;font-size:13px;margin-top:8px}
+.ctrl button{background:var(--ac);border:0;color:#fff;border-radius:999px;padding:8px 18px;font-size:14px}
+.ctrl input{accent-color:var(--ac);width:110px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="tabs" id="tabs"></div>
+  <section class="hero">
+    <div class="stage"><img id="frame" alt="球類動畫"></div>
+    <div class="strip" id="strip"></div>
+    <div class="ctrl">
+      <button id="toggle">暫停</button>
+      速度 <input type="range" id="fps" min="4" max="30" value="12"> <span id="fpsv">12</span> fps
+    </div>
+  </section>
+</div>
+
+<script>
+// 每一張影格都是獨立圖片（SVG data URI）。想用自己的圖片，把 FRAMES 換成圖片網址陣列即可。
+const f=n=>n.toFixed(1);
+const svg=b=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">${b}</svg>`;
+const racket=(x,side,sw,paddle)=>`<g transform="translate(${x},180) rotate(${f(side*(-25+60*sw))})"><line y2="${paddle?-24:-32}" stroke="#d6a76a" stroke-width="4" stroke-linecap="round"/>${paddle?`<circle cy="-38" r="14" fill="#d33" stroke="#222" stroke-width="2"/>`:`<ellipse cy="-50" rx="11" ry="17" fill="none" stroke="#0284c7" stroke-width="3"/>`}</g>`;
+const rackets=(i,n,paddle,xl,xr)=>{const dir=i<n/2?1:-1,k=i%(n/2),hit=Math.max(0,1-k/3),rec=Math.max(0,(k-4)/4);
+  return racket(xl,1,dir>0?hit:rec,paddle)+racket(xr,-1,dir>0?rec:hit,paddle)};
+
+const sports={
+ "籃球":{n:12,draw(i){
+  const p=i/12,h=4*p*(1-p),sq=Math.max(0,1-h/0.16),st=h>0.16?Math.min(1,(1-h)*0.2):0;
+  const sx=1+0.2*sq-0.04*st,sy=1-0.22*sq+0.06*st,cy=215-30*sy-h*130;
+  return svg(`<line x1="20" y1="217" x2="280" y2="217" stroke="#9ca3af" stroke-opacity=".7" stroke-width="2"/><ellipse cx="150" cy="217" rx="${f(34*(1-.45*h))}" ry="6" fill="#000" opacity="${(.4-.22*h).toFixed(2)}"/><g transform="translate(150,${f(cy)}) scale(${sx.toFixed(3)},${sy.toFixed(3)}) rotate(${f(p*360)})"><circle r="30" fill="#f08a2c" stroke="#5a2d0c" stroke-width="2"/><g stroke="#5a2d0c" stroke-width="2" fill="none"><line x1="-30" x2="30"/><line y1="-30" y2="30"/><path d="M-21,-21 Q-8,0 -21,21"/><path d="M21,-21 Q8,0 21,21"/></g></g>`)}},
+ "羽球":{n:16,draw(i){
+  const dir=i<8?1:-1,s=(i%8)/8,x=dir>0?50+200*s:250-200*s,y=150-320*s*(1-s);
+  const ang=Math.atan2(-320*(1-2*s),200*dir)*180/Math.PI;
+  return svg(`<line x1="20" y1="217" x2="280" y2="217" stroke="#9ca3af" stroke-opacity=".7" stroke-width="2"/><line x1="150" y1="217" x2="150" y2="165" stroke="#6b7280" stroke-width="3"/><rect x="146" y="165" width="8" height="30" fill="#9ca3af" opacity=".3"/>${rackets(i,16,false,45,255)}<g transform="translate(${f(x)},${f(y)}) rotate(${f(ang)})"><polygon points="-4,-3 -26,-13 -26,13 -4,3" fill="#fff" stroke="#9ca3af" stroke-width="1.5"/><g stroke="#9ca3af"><line x1="-4" y1="0" x2="-26" y2="0"/><line x1="-4" y1="-1.5" x2="-26" y2="-7"/><line x1="-4" y1="1.5" x2="-26" y2="7"/></g><circle r="6" fill="#f3e9d2" stroke="#9ca3af" stroke-width="1.5"/></g>`)}},
+ "桌球":{n:16,draw(i){
+  const dir=i<8?1:-1,s=(i%8)/8,x=dir>0?35+230*s:265-230*s;
+  const h=s<.65?55*(1-(s/.65)**2):38*(1-((1-s)/.35)**2);
+  return svg(`<line x1="20" y1="217" x2="280" y2="217" stroke="#9ca3af" stroke-opacity=".7" stroke-width="2"/><rect x="30" y="190" width="240" height="6" rx="2" fill="#2563eb"/><g stroke="#94a3b8" stroke-width="4"><line x1="50" y1="196" x2="50" y2="217"/><line x1="250" y1="196" x2="250" y2="217"/></g><line x1="150" y1="190" x2="150" y2="173" stroke="#6b7280" stroke-width="3"/>${rackets(i,16,true,18,282)}<circle cx="${f(x)}" cy="${f(184-h)}" r="6" fill="#ff9f43" stroke="#c2570c" stroke-width="1"/>`)}}
+};
+
+const img=document.getElementById("frame"),strip=document.getElementById("strip"),tabs=document.getElementById("tabs"),btn=document.getElementById("toggle");
+let FRAMES=[],thumbs=[],cur=0,playing=true,fps=12,last=0;
+const uri=s=>"data:image/svg+xml;utf8,"+encodeURIComponent(s);
+function show(i){cur=i;img.src=FRAMES[i];thumbs.forEach((t,k)=>t.classList.toggle("on",k===i))}
+function load(name){
+  const sp=sports[name];
+  FRAMES=Array.from({length:sp.n},(_,i)=>uri(sp.draw(i)));
+  strip.innerHTML="";
+  thumbs=FRAMES.map((src,i)=>{const t=new Image();t.src=src;t.onclick=()=>{playing=false;btn.textContent="播放";show(i)};strip.appendChild(t);return t});
+  [...tabs.children].forEach(b=>b.classList.toggle("on",b.textContent===name));
+  show(0);
+}
+Object.keys(sports).forEach(n=>{const b=document.createElement("button");b.textContent=n;b.onclick=()=>load(n);tabs.appendChild(b)});
+btn.onclick=()=>{playing=!playing;btn.textContent=playing?"暫停":"播放"};
+document.getElementById("fps").oninput=e=>{fps=+e.target.value;document.getElementById("fpsv").textContent=fps};
+function loop(ts){if(playing&&ts-last>1000/fps){last=ts;show((cur+1)%FRAMES.length)}requestAnimationFrame(loop)}
+load("籃球");requestAnimationFrame(loop);
+</script>
+</body>
+</html>
